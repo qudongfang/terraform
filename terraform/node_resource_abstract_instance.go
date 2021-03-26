@@ -291,9 +291,36 @@ func (n *NodeAbstractResourceInstance) writeResourceInstanceState(ctx EvalContex
 	}
 
 	// store the new deps in the state.
-	// We check for nil here because don't want to override existing dependencies on orphaned nodes.
+	//switch targetState {
+	//case refreshState:
 	if dependencies != nil {
-		obj.Dependencies = dependencies
+		set := make(map[string]addrs.ConfigResource)
+		for _, dep := range obj.Dependencies {
+			set[dep.String()] = dep
+		}
+
+		for _, dep := range dependencies {
+			set[dep.String()] = dep
+		}
+
+		newDeps := make([]addrs.ConfigResource, 0, len(set))
+		for _, dep := range set {
+			newDeps = append(newDeps, dep)
+		}
+
+		obj.Dependencies = newDeps
+
+		//// We always retain the stored state if no dependencies were calculated
+		//// (the nil value here). This is usually an orphaned resource node.
+		//fmt.Printf("STATE DEPS: %#v\n", obj.Dependencies)
+		//if dependencies != nil {
+		//    log.Printf("[TRACE] writeResourceInstanceState: %q storing dependencies %s", absAddr, dependencies)
+		//    obj.Dependencies = dependencies
+		//}
+
+		//default:
+		//    log.Printf("[TRACE] writeResourceInstanceState: %q storing dependencies %s", absAddr, dependencies)
+		//    obj.Dependencies = dependencies
 	}
 
 	if providerSchema == nil {
@@ -526,8 +553,6 @@ func (n *NodeAbstractResourceInstance) refresh(ctx EvalContext, state *states.Re
 	ret := state.DeepCopy()
 	ret.Value = resp.NewState
 	ret.Private = resp.Private
-	ret.Dependencies = state.Dependencies
-	ret.CreateBeforeDestroy = state.CreateBeforeDestroy
 
 	// Call post-refresh hook
 	diags = diags.Append(ctx.Hook(func(h Hook) (HookAction, error) {

@@ -99,7 +99,9 @@ func (n *NodePlannableResourceInstanceOrphan) managedResourceExecute(ctx EvalCon
 			return diags
 		}
 
-		diags = diags.Append(n.writeResourceInstanceState(ctx, state, n.Dependencies, refreshState))
+		// dependencies here is always nil, because an orphaned instance should
+		// always retain the stored deps
+		diags = diags.Append(n.writeResourceInstanceState(ctx, state, nil, refreshState))
 		if diags.HasErrors() {
 			return diags
 		}
